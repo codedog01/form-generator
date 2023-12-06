@@ -15,17 +15,77 @@ const ruleTrigger = {
 }
 
 const layouts = {
+  tsElTabs(h, scheme) {
+    const { children } = scheme // 获取子节点
+    const exportPane = []
+    const listeners = buildListeners.call(this, scheme)
+    for (let i = 0; i < children.length; i++) {
+      const child = renderTabsChildren.call(this, h, children[i])
+      exportPane.push([<el-tab-pane label={children[i].label} name={children[i].name}>
+        {child}
+      </el-tab-pane>])
+    }
+    return <el-col span={scheme.span}>
+      <el-row gutter={scheme.gutter}>
+        <render conf={scheme} on={listeners}>
+          {exportPane}
+        </render>
+      </el-row>
+    </el-col>
+  },
+  tsCard(h, scheme) {
+    const cardBody = renderChildren.apply(this, arguments)
+    return (
+      <el-col span={scheme.span}>
+        <el-row gutter={scheme.gutter}>
+          <el-card className="box-card">
+            <div slot="header" className="clearfix">
+              <span>{scheme.__config__.label}</span>
+            </div>
+            <div>{cardBody}</div>
+          </el-card>
+        </el-row>
+      </el-col>
+    )
+  },
+  tsSubform(h, scheme) {
+    const config = scheme.__config__
+    const data = JSON.parse(JSON.stringify(config.children))
+    data.forEach(item => {
+      item.__config__.prop = item.__vModel__
+    })
+    const tableData = data
+    let labelWidth = config.labelWidth ? `${config.labelWidth}px` : null
+    if (config.showLabel === false) labelWidth = '0'
+    return (
+      <el-col span={config.span}>
+        <el-form-item label-width={labelWidth}
+          label={config.showLabel ? config.label : ''}>
+          <ts-sub-form
+            table-data={tableData}
+            value={config.defaultValue}
+            displayShow={scheme.displayShow}
+            addButton={scheme.addButton}
+            canEdit={scheme.canEdit}
+            deleteButton={scheme.deleteButton}
+          ></ts-sub-form>
+        </el-form-item>
+      </el-col>
+    )
+  },
+
   colFormItem(h, scheme) {
     const config = scheme.__config__
     const listeners = buildListeners.call(this, scheme)
 
     let labelWidth = config.labelWidth ? `${config.labelWidth}px` : null
     if (config.showLabel === false) labelWidth = '0'
+    const child = renderChildren.apply(this, arguments)
     return (
       <el-col span={config.span}>
         <el-form-item label-width={labelWidth} prop={scheme.__vModel__}
           label={config.showLabel ? config.label : ''}>
-          <render conf={scheme} on={listeners} />
+          <render conf={scheme} on={listeners}>{child}</render>
         </el-form-item>
       </el-col>
     )
@@ -34,8 +94,8 @@ const layouts = {
     let child = renderChildren.apply(this, arguments)
     if (scheme.type === 'flex') {
       child = <el-row type={scheme.type} justify={scheme.justify} align={scheme.align}>
-              {child}
-            </el-row>
+        {child}
+      </el-row>
     }
     return (
       <el-col span={scheme.span}>
@@ -43,6 +103,13 @@ const layouts = {
           {child}
         </el-row>
       </el-col>
+    )
+  },
+  raw(h, scheme) {
+    const child = renderChildren.apply(this, arguments)
+    const listeners = buildListeners.call(this, scheme)
+    return (
+      <render conf={scheme} on={listeners}>{child}</render>
     )
   }
 }
@@ -58,7 +125,6 @@ function renderFrom(h) {
         disabled={formConfCopy.disabled}
         label-width={`${formConfCopy.labelWidth}px`}
         ref={formConfCopy.formRef}
-        // model不能直接赋值 https://github.com/vuejs/jsx/issues/49#issuecomment-472013664
         props={{ model: this[formConfCopy.formModel] }}
         rules={this[formConfCopy.formRules]}
       >
@@ -91,11 +157,30 @@ function renderFormItem(h, elementList) {
 }
 
 function renderChildren(h, scheme) {
+  if (scheme.__config__.tag === 'el-card') {
+    const children = scheme.__config__.children.cardBody
+    return renderFormItem.call(this, h, children)
+  }
+
   const config = scheme.__config__
   if (!Array.isArray(config.children)) return null
-  return renderFormItem.call(this, h, config.children)
+
+  return config.children.map((el, i) => {
+    const layout = layouts[el.__config__.layout]
+    if (layout) {
+      return layout.call(this, h, el, i, config.children)
+    }
+    return renderFormItem.call(this, h, config.children)
+  })
+
+  //  return renderFormItem.call(this, h, config.children)
 }
 
+function renderTabsChildren(h, scheme, a) {
+  const config = scheme.children
+  if (!Array.isArray(config)) return null
+  return renderFormItem.call(this, h, config)
+}
 function setValue(event, config, scheme) {
   this.$set(config, 'defaultValue', event)
   this.$set(this[this.formConf.formModel], scheme.__vModel__, event)
@@ -137,14 +222,30 @@ export default {
     return data
   },
   methods: {
+
     initFormData(componentList, formData) {
-      componentList.forEach(cur => {
-        const config = cur.__config__
-        if (cur.__vModel__) formData[cur.__vModel__] = config.defaultValue
-        if (config.children) this.initFormData(config.children, formData)
-      })
+      if (Array.isArray(componentList)) {
+        componentList.forEach(cur => {
+          if (cur.__config__.tag === 'ts-sub-form') {
+            const config = cur.__config__
+            config.defaultValue = [{ field102: '111', field103: '222' }, { field102: '333', field103: '444' }]
+            formData[config.formId] = config.defaultValue
+          } else {
+            const config = cur.__config__
+            if (cur.__vModel__) formData[cur.__vModel__] = config.defaultValue
+            if (config.children) this.initFormData(config.children, formData)
+          }
+        })
+      } else {
+        componentList.cardBody.forEach(cur => {
+          const config = cur.__config__
+          if (cur.__vModel__) formData[cur.__vModel__] = config.defaultValue
+          if (config.children) this.initFormData(config.children, formData)
+        })
+      }
     },
     buildRules(componentList, rules) {
+      if (!Array.isArray(componentList)) return
       componentList.forEach(cur => {
         const config = cur.__config__
         if (Array.isArray(config.regList)) {

@@ -38,14 +38,24 @@ function emitEvents(confClone) {
   ['on', 'nativeOn'].forEach(attr => {
     const eventKeyList = Object.keys(confClone[attr] || {})
     eventKeyList.forEach(key => {
-      const val = confClone[attr][key]
+      let val = confClone[attr][key]
+      // 因为render的原因，暂时没办法拿到on作为字符串直接编辑
+      // 所以我定义了一个tiger属性，将tiger和on来回切换
+      // tiger作为在线编辑的源以及最终on的输出
+      if (confClone.tiger) {
+        val = eval(`(${confClone.tiger[key]})`)
+        confClone[attr][key] = val
+      } else {
+        this.conf.tiger = {
+          [key]: val.toString()
+        }
+      }
       if (typeof val === 'string') {
         confClone[attr][key] = event => this.$emit(val, event)
       }
     })
   })
 }
-
 function buildDataObject(confClone, dataObject) {
   Object.keys(confClone).forEach(key => {
     const val = confClone[key]
@@ -103,11 +113,15 @@ export default {
       required: true
     }
   },
+
   render(h) {
     const dataObject = makeDataObject()
     const confClone = deepClone(this.conf)
+    // 这里是为了重新打开浏览器时事件被赋值
+    if (this.conf.tiger) {
+      confClone.on = deepClone(this.conf).tiger
+    }
     const children = this.$slots.default || []
-
     // 如果slots文件夹存在与当前tag同名的文件，则执行文件中的代码
     mountSlotFiles.call(this, h, confClone, children)
 

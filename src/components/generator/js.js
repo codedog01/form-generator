@@ -1,3 +1,11 @@
+/*
+ * @Author: lengao 841423154@qq.com
+ * @Date: 2021-05-30 08:58:16
+ * @LastEditors: lengao 841423154@qq.com
+ * @LastEditTime: 2023-12-06 17:42:38
+ * @FilePath: \form-generator-dev\src\components\generator\js.js
+ * @Description: 1
+ */
 import { isArray } from 'util'
 import { exportDefault, titleCase, deepClone } from '@/utils/index'
 import ruleTrigger from './ruleTrigger'
@@ -27,9 +35,10 @@ export function makeUpJs(formConfig, type) {
   const methodList = mixinMethod(type)
   const uploadVarList = []
   const created = []
+  const other = []
 
   formConfig.fields.forEach(el => {
-    buildAttributes(el, dataList, ruleList, optionsList, methodList, propsList, uploadVarList, created)
+    buildAttributes(el, dataList, ruleList, optionsList, methodList, propsList, uploadVarList, created, other, formConfig)
   })
 
   const script = buildexport(
@@ -41,18 +50,30 @@ export function makeUpJs(formConfig, type) {
     uploadVarList.join('\n'),
     propsList.join('\n'),
     methodList.join('\n'),
-    created.join('\n')
+    created.join('\n'),
+    other.join('\n')
   )
   confGlobal = null
   return script
 }
 
 // 构建组件属性
-function buildAttributes(scheme, dataList, ruleList, optionsList, methodList, propsList, uploadVarList, created) {
+function buildAttributes(scheme, dataList, ruleList, optionsList, methodList, propsList, uploadVarList,
+  created, other, formConfig) {
+  if (scheme.tiger) {
+    buildOptionMethod(null, null, methodList, scheme)
+  }
   const config = scheme.__config__
   const slot = scheme.__slot__
-  buildData(scheme, dataList)
+  buildData(scheme, dataList, other)
   buildRules(scheme, ruleList)
+  if (config.tag === 'el-tabs') {
+    scheme.children.forEach(item => {
+      item.children.forEach(el => {
+        buildAttributes(el, dataList, ruleList, optionsList, methodList, propsList, uploadVarList, created)
+      })
+    })
+  }
 
   // 特殊处理options属性
   if (scheme.options || (slot && slot.options && slot.options.length)) {
@@ -65,7 +86,16 @@ function buildAttributes(scheme, dataList, ruleList, optionsList, methodList, pr
       callInCreated(methodName, created)
     }
   }
-
+  if (config.tag === 'el-steps') {
+    buildOptionMethod(null, null, methodList, scheme)
+  }
+  // 这里主要拼接动态获取数据的方法
+  if (config.tag === 'el-table') {
+    const model = `${formConfig.formModel}.${scheme.__vModel__}`
+    const methodName = `get${scheme.__vModel__}`
+    buildOptionMethod(methodName, model, methodList, scheme)
+    callInCreated(methodName, created)
+  }
   // 处理props
   if (scheme.props && scheme.props.props) {
     buildProps(scheme, propsList)
@@ -85,7 +115,17 @@ function buildAttributes(scheme, dataList, ruleList, optionsList, methodList, pr
   }
 
   // 构建子级组件属性
-  if (config.children) {
+  if (config.tag === 'el-card') {
+    config.children.cardBody.forEach(item => {
+      buildAttributes(item, dataList, ruleList, optionsList, methodList, propsList, uploadVarList, created)
+    })
+  } else if (config.tag === 'el-steps') {
+    scheme.children.forEach(children => {
+      children.children.forEach(item => {
+        buildAttributes(item, dataList, ruleList, optionsList, methodList, propsList, uploadVarList, created)
+      })
+    })
+  } else if (config.children) {
     config.children.forEach(item => {
       buildAttributes(item, dataList, ruleList, optionsList, methodList, propsList, uploadVarList, created)
     })
@@ -140,9 +180,41 @@ function mixinMethod(type) {
 }
 
 // 构建data
-function buildData(scheme, dataList) {
+function buildData(scheme, dataList, other) {
   const config = scheme.__config__
+  if (config.tag === 'el-steps') {
+    dataList.push(`steps_${config.formId}: ${scheme.active},`)
+  }
+  if (config.tag === 'ts-sub-form') {
+    const subformData = []
+    if (scheme.__config__.children.length > 0) {
+      scheme.__config__.children.forEach(item => {
+        const basicsData = JSON.parse(JSON.stringify(item))
+        basicsData.__config__.prop = item.__vModel__
+        basicsData.disabled = item.disabled
+        basicsData.readonly = item.readonly
+        subformData.push(basicsData)
+      })
+    }
+    other.push(`subForm${config.formId}: ${JSON.stringify(subformData)},`)
+    other.push(`subForm${config.formId}Data: ${JSON.stringify(config.defaultValue)},`)
+    other.push(`addButton${config.formId}: ${JSON.stringify(scheme.addButton)},`)
+    other.push(`canEdit${config.formId}: ${JSON.stringify(scheme.canEdit)},`)
+    other.push(`deleteButton${config.formId}: ${JSON.stringify(scheme.deleteButton)},`)
+    other.push(`displayShow${config.formId}: ${JSON.stringify(scheme.displayShow)},`)
+    return
+  }
   if (scheme.__vModel__ === undefined) return
+
+  if (config.tag === 'el-image') {
+    const defaultValue = scheme['preview-src-list']
+    dataList.push(`${scheme.__vModel__}: ${JSON.stringify(defaultValue)},`)
+    return
+  }
+  if (config.tag === 'el-table') {
+    dataList.push(`${scheme.__vModel__}: []`)
+    return
+  }
   const defaultValue = JSON.stringify(config.defaultValue)
   dataList.push(`${scheme.__vModel__}: ${defaultValue},`)
 }
@@ -225,7 +297,8 @@ function buildSubmitUpload(scheme) {
 
 function buildOptionMethod(methodName, model, methodList, scheme) {
   const config = scheme.__config__
-  const str = `${methodName}() {
+  if (config.url) {
+    const str = `${methodName}() {
     // 注意：this.$axios是通过Vue.prototype.$axios = axios挂载产生的
     this.$axios({
       method: '${config.method}',
@@ -235,17 +308,41 @@ function buildOptionMethod(methodName, model, methodList, scheme) {
       this.${model} = data.${config.dataPath}
     })
   },`
-  methodList.push(str)
+    methodList.push(str)
+  }
+  if (config.tag === 'el-steps') {
+    const stepsClick = `
+    // 这里没有加步骤条里面的字段校验，需要的话就在这里增加表单校验就好
+    tsStepClick(){
+      this.${confGlobal.formModel}.steps_${config.formId}++
+    },
+    `
+    methodList.push(stepsClick)
+  }
+  if (scheme.tiger) {
+    // eslint-disable-next-line guard-for-in,no-restricted-syntax
+    for (const funKey in scheme.tiger) {
+      console.log(scheme.tiger[funKey])
+      const val = scheme.tiger[funKey].match(/\((.+?)\)/g)[0] || '()'
+      const start = scheme.tiger[funKey].split('{')
+      const eng = start[1].split('}')
+      const str = `${scheme.__vModel__}${funKey}${val} {${eng[0]}},`
+      methodList.push(str)
+    }
+  }
 }
 
 // js整体拼接
-function buildexport(conf, type, data, rules, selectOptions, uploadVar, props, methods, created) {
+function buildexport(conf, type, data, rules, selectOptions, uploadVar, props, methods, created, other) {
   const str = `${exportDefault}{
   ${inheritAttrs[type]}
   components: {},
   props: [],
   data () {
     return {
+      ${conf.other}: {
+        ${other}
+      },
       ${conf.formModel}: {
         ${data}
       },

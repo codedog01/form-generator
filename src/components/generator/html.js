@@ -34,6 +34,13 @@ export function cssStyle(cssStr) {
   </style>`
 }
 
+// el-card 子级
+function buildElCardChild(scheme) {
+  const { cardBody } = scheme.__config__.children
+  const actionChildren = cardBody.map(el => layouts[el.__config__.layout](el))
+  return actionChildren.join('\n')
+}
+
 function buildFormTemplate(scheme, child, type) {
   let labelPosition = ''
   if (scheme.labelPosition !== 'right') {
@@ -79,6 +86,35 @@ function colWrapper(scheme, str) {
 }
 
 const layouts = {
+  tsElTabs(scheme) {
+    const config = scheme.__config__
+    const tagDom = tags[config.tag] ? tags[config.tag](scheme) : null
+    let str = tagDom
+    str = colWrapper(scheme, str)
+    return str
+  },
+  tsSteps(scheme) {
+    const config = scheme.__config__
+    const tagDom = tags[config.tag] ? tags[config.tag](scheme) : null
+    let str = tagDom
+    str = colWrapper(scheme, str)
+    return str
+  },
+  tsCard(scheme) {
+    const cardBody = buildElCardChild(scheme)
+    return `<el-row><el-col :span=${scheme.__config__.span}><el-card :body-style="{ padding: '0px' }">
+      <div slot="header" className="clearfix"><span>${scheme.__config__.label}</span>
+      </div><div style="padding: 14px;">${cardBody}</div></el-card><el-col/></el-row>`
+  },
+  tsSubform(scheme) {
+    const dataName = `:table-data="other.subForm${scheme.__config__.formId}"`
+    const value = `v-model="other.subForm${scheme.__config__.formId}Data"`
+    const addButton = `:addButton="other.addButton${scheme.__config__.formId}"`
+    const deleteButton = `:deleteButton="other.deleteButton${scheme.__config__.formId}"`
+    const displayShow = `:displayShow="other.displayShow${scheme.__config__.formId}"`
+    const canEdit = `:canEdit="other.canEdit${scheme.__config__.formId}"`
+    return `<ts-sub-form ${dataName} ${value} ${addButton} ${deleteButton} ${displayShow} ${canEdit}></ts-sub-form>`
+  },
   colFormItem(scheme) {
     const config = scheme.__config__
     let labelWidth = ''
@@ -109,6 +145,13 @@ const layouts = {
       ${children.join('\n')}
     </el-row>`
     str = colWrapper(scheme, str)
+    return str
+  },
+  raw(scheme) {
+    let str = ''
+    const config = scheme.__config__
+    const tagDom = tags[config.tag] ? tags[config.tag](scheme) : null
+    str = `${tagDom}`
     return str
   }
 }
@@ -161,16 +204,23 @@ const tags = {
 
     return `<${tag} ${vModel} ${placeholder} ${step} ${stepStrictly} ${precision} ${controlsPosition} ${min} ${max} ${disabled}></${tag}>`
   },
+
   'el-select': el => {
     const {
       tag, disabled, vModel, clearable, placeholder, width
     } = attrBuilder(el)
+    const Fun = createFun(el)
+    let FunString = ''
+    // eslint-disable-next-line no-restricted-syntax,guard-for-in
+    for (const funKey in Fun) {
+      FunString += `${Fun[funKey]} `
+    }
     const filterable = el.filterable ? 'filterable' : ''
     const multiple = el.multiple ? 'multiple' : ''
     let child = buildElSelectChild(el)
 
     if (child) child = `\n${child}\n` // 换行
-    return `<${tag} ${vModel} ${placeholder} ${disabled} ${multiple} ${filterable} ${clearable} ${width}>${child}</${tag}>`
+    return `<${tag} ${vModel}${FunString}  ${placeholder} ${disabled} ${multiple} ${filterable} ${clearable} ${width}>${child}</${tag}>`
   },
   'el-radio-group': el => {
     const { tag, disabled, vModel } = attrBuilder(el)
@@ -290,9 +340,186 @@ const tags = {
     const height = el.height ? `:height="${el.height}"` : ''
     const branding = el.branding ? `:branding="${el.branding}"` : ''
     return `<${tag} ${vModel} ${placeholder} ${height} ${branding}></${tag}>`
+  },
+  'el-image': el => {
+    const {
+      src, fit, style
+    } = el
+    // 因为这里样式并不是很复杂，就不单独写在css.js里面了
+    let styles = ''
+    const { tag } = attrBuilder(el)
+    // eslint-disable-next-line guard-for-in,no-restricted-syntax
+    for (const key in style) {
+      styles += `${key}:${style[key]};`
+    }
+    const previewSrcList = `:preview-src-list="${confGlobal.formModel}.${el.__vModel__}"`
+    return `<${tag} style=${styles} src="${src}" ${previewSrcList} fit="${fit}"></${tag}>`
+  },
+  'ts-sub-form': el => {
+    const dataName = `:table-data="other.subForm${el.__config__.formId}"`
+    const value = `v-model="other.subForm${el.__config__.formId}Data"`
+    const addButton = `:addButton="other.addButton${el.__config__.formId}"`
+    const deleteButton = `:deleteButton="other.deleteButton${el.__config__.formId}"`
+    const displayShow = `:displayShow="other.displayShow${el.__config__.formId}"`
+    const canEdit = `:canEdit="other.canEdit${el.__config__.formId}"`
+    return `<ts-sub-form ${dataName} ${value} ${addButton} ${deleteButton} ${displayShow} ${canEdit}></ts-sub-form>`
+  },
+  'ts-text': el => {
+    const {
+      clearable, placeholder, width
+    } = attrBuilder(el)
+    const text = el.__slot__.span
+    const { style } = el
+    let styles = ''
+    // eslint-disable-next-line guard-for-in,no-restricted-syntax
+    for (const key in style) {
+      styles += `${key}:${style[key]};`
+    }
+    return `<div ${clearable} style="${styles}" ${placeholder}><span>${text}</span></div>`
+  },
+  'ts-iframe': el => {
+    const { tag } = attrBuilder(el)
+    const src = `src="${el.src}"`
+    const width = `width="${el.width}"`
+    const height = `height="${el.height}"`
+    return `<${tag} ${src} ${width} ${height} />`
+  },
+  'el-table': el => {
+    const {
+      tag
+    } = attrBuilder(el)
+    const child = elTableColumn(el)
+    return `<${tag} :data="${confGlobal.formModel}.${el.__vModel__}">${child}</${tag}>`
+  },
+
+  'el-collapse': el => {
+    const {
+      tag, vModel
+    } = attrBuilder(el)
+    const accordion = `:accordion="${el.accordion}"`
+    let child = buildElCollapseChild(el)
+    if (child) child = `\n${child}\n` // 换行
+    return `<${tag} ${vModel} ${accordion} >${child}</${tag}>`
+  },
+  'el-steps': el => {
+    const config = el.__config__
+    const status = config['finish-status'] ? `finish-status=${config['finish-status']} ` : ''
+    const finishText = config['finish-text'] ? config['finish-text'] : '已完成！'
+    const step = buildElStepsChild(el)
+    const child = buildElStepChild(el)
+    const stepsLength = el.children.length
+    return `
+    <div>
+      <el-steps :active="${confGlobal.formModel}.steps_${config.formId}" ${status}>
+        ${step}
+      </el-steps>
+      ${child}
+      <el-row type="flex" justify="center" style="clear:both;margin-bottom:10px;">
+        <el-button size="small" v-if="${confGlobal.formModel}.steps_${config.formId} > 0" @click="${confGlobal.formModel}.steps_${config.formId}--">上一步</el-button>
+        <el-button size="small" v-if="${confGlobal.formModel}.steps_${config.formId} < ${stepsLength}" @click="tsStepClick" type="primary">下一步</el-button>
+      </el-row>
+      <div v-if="${confGlobal.formModel}.steps_${config.formId}==${stepsLength}">完成啦啦啦啦啦啦啦</div>
+    </div>
+    `
+  },
+
+  'el-tabs': el => {
+    const { tag, vModel } = attrBuilder(el)
+    const type = el.type ? `type="${el.type}"` : ''
+    const closable = el.closable ? `type="${el.closable}"` : ''
+    const tabPosition = el['tab-position'] ? `tab-position="${el['tab-position']}"` : ''
+    const child = exportTabsChild(el)
+    return `<${tag} ${type} ${vModel} ${closable} ${tabPosition}>${child}</${tag}>`
   }
+
 }
 
+// tab 标签页
+function exportTabsChild(scheme) {
+  const childrenList = []
+  const { children } = scheme
+  for (let i = 0; i < children.length; i++) {
+    let childHtml = []
+    for (let j = 0; j < children[i].children.length; j++) {
+      if (children[i].children[j]) {
+        const oneChildHtml = layouts[children[i].children[j].__config__.layout](children[i].children[j])
+        childHtml.push(oneChildHtml)
+      }
+    }
+    childHtml = childHtml.join('\n')
+    childrenList.push(
+      `<el-tab-pane label='${children[i].label}'>
+          ${childHtml}
+        </el-tab-pane>`
+    )
+  }
+  return childrenList.join('\n')
+}
+
+// 获取steps下的step
+function buildElStepsChild(el) {
+  const stepTitle = []
+  const { children } = el
+  for (let i = 0; i < children.length; i++) {
+    stepTitle.push(`<el-step title="${children[i].title}" description="${children[i].description}">12333333333333333332</el-step>`)
+  }
+  return stepTitle.join('\n')
+}
+
+// 获取step下的子元素
+function buildElStepChild(el) {
+  const config = el.__config__
+  const stepChildes = []
+  const { children } = el
+  for (let i = 0; i < children.length; i++) {
+    if (children[i].children.length > 0) {
+      let childHtml = []
+      for (let j = 0; j < children[i].children.length; j++) {
+        if (children[i].children[j]) {
+          const oneChildHtml = layouts[children[i].children[j].__config__.layout](children[i].children[j])
+          childHtml.push(oneChildHtml)
+        }
+      }
+      childHtml = childHtml.join('\n')
+      stepChildes.push(
+        `<div v-show="${confGlobal.formModel}.steps_${config.formId}===${i}" label='${children[i].title}'>
+          ${childHtml}
+        </div>`
+      )
+    }
+  }
+  return stepChildes.join('\n')
+}
+// el-collapse 子级
+function buildElCollapseChild(scheme) {
+  const children = []
+  const collapses = scheme.__config__.children
+  if (collapses && collapses.length) {
+    for (let i = 0; i < collapses.length; i++) {
+      const actionChildren = collapses[i].__config__.children.map(el => layouts[el.__config__.layout](el))
+      children.push(`<el-collapse-item title="${collapses[i].title}" name="${collapses[i].name}" :disabled="${collapses[i].disabled}">
+        ${actionChildren}
+      </el-collapse-item>`)
+    }
+  }
+  return children.join('\n')
+}
+function elTableColumn(scheme) {
+  const children = []
+  const config = scheme.__config__
+  if (config.children.length > 0) {
+    const { tag } = scheme.__config__.children[0].__config__
+    config.children.forEach(ts => {
+      ts.prop && children.push(`<${tag} label="${ts.label}" align="${ts.align}" prop="${ts.prop}"></${tag}>`)
+      // 这里的话我没有做判断  只是写一个简单的逻辑  没有做任何判断  这里可以给操作加一个特殊的标志
+      if (!ts.prop) {
+        const actionChildren = ts.__config__.children.map(el => layouts[el.__config__.layout](el))
+        children.push(`<${tag} label="操作">\n<template slot-scope="scope">${actionChildren}</template></${tag}>`)
+      }
+    })
+  }
+  return children.join('\n')
+}
 function attrBuilder(el) {
   return {
     tag: el.__config__.tag,
@@ -396,4 +623,16 @@ export function makeUpHtml(formConfig, type) {
   }
   confGlobal = null
   return temp
+}
+
+function createFun(el) {
+  if (!el.tiger) {
+    return null
+  }
+  const funObj = {}
+  // eslint-disable-next-line guard-for-in,no-restricted-syntax
+  for (const funKey in el.tiger) {
+    funObj[funKey] = `@${funKey}="${el.__vModel__}${funKey}"`
+  }
+  return funObj
 }

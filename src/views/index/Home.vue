@@ -16,20 +16,12 @@
               <svg-icon icon-class="component" />
               {{ item.title }}
             </div>
-            <draggable
-              class="components-draggable"
-              :list="item.list"
-              :group="{ name: 'componentsGroup', pull: 'clone', put: false }"
-              :clone="cloneComponent"
-              draggable=".components-item"
-              :sort="false"
-              @end="onEnd"
+            <draggable class="components-draggable" :list="item.list"
+                       :group="{ name: 'componentsGroup', pull: 'clone', put: false }" :clone="cloneComponent"
+                       draggable=".components-item" :sort="false" @end="onEnd"
             >
-              <div
-                v-for="(element, index) in item.list"
-                :key="index"
-                class="components-item"
-                @click="addComponent(element)"
+              <div v-for="(element, index) in item.list" :key="index" class="components-item"
+                   @click="addComponent(element)"
               >
                 <div class="components-body">
                   <svg-icon :icon-class="element.__config__.tagIcon" />
@@ -44,6 +36,16 @@
 
     <div class="center-board">
       <div class="action-bar">
+        <el-tooltip class="item" effect="dark" content="撤销" placement="bottom">
+          <el-button :disabled="!isRevoke" type="text" @click="revoke">
+            <svg-icon icon-class="revoke" style="font-size:20px;color: #409EFF" />
+          </el-button>
+        </el-tooltip>
+        <el-tooltip class="item" effect="dark" content="重做" placement="bottom">
+          <el-button :disabled="!isRedo" type="text" @click="redo">
+            <svg-icon icon-class="redo" style="font-size:20px;color: #409EFF" />
+          </el-button>
+        </el-tooltip>
         <el-button icon="el-icon-video-play" type="text" @click="run">
           运行
         </el-button>
@@ -62,24 +64,13 @@
       </div>
       <el-scrollbar class="center-scrollbar">
         <el-row class="center-board-row" :gutter="formConf.gutter">
-          <el-form
-            :size="formConf.size"
-            :label-position="formConf.labelPosition"
-            :disabled="formConf.disabled"
-            :label-width="formConf.labelWidth + 'px'"
+          <el-form :size="formConf.size" :label-position="formConf.labelPosition" :disabled="formConf.disabled"
+                   :label-width="formConf.labelWidth + 'px'"
           >
             <draggable class="drawing-board" :list="drawingList" :animation="340" group="componentsGroup">
-              <draggable-item
-                v-for="(item, index) in drawingList"
-                :key="item.renderKey"
-                :drawing-list="drawingList"
-                :current-item="item"
-                :index="index"
-                :active-id="activeId"
-                :form-conf="formConf"
-                @activeItem="activeFormItem"
-                @copyItem="drawingItemCopy"
-                @deleteItem="drawingItemDelete"
+              <draggable-item v-for="(item, index) in drawingList" :key="item.renderKey" :drawing-list="drawingList"
+                              :current-item="item" :index="index" :active-id="activeId" :form-conf="formConf"
+                              @activeItem="activeFormItem" @copyItem="drawingItemCopy" @deleteItem="drawingItemDelete"
               />
             </draggable>
             <div v-show="!drawingList.length" class="empty-info">
@@ -90,32 +81,15 @@
       </el-scrollbar>
     </div>
 
-    <right-panel
-      :active-data="activeData"
-      :form-conf="formConf"
-      :show-field="!!drawingList.length"
-      @tag-change="tagChange"
-      @fetch-data="fetchData"
+    <right-panel :active-data="activeData" :form-conf="formConf" :show-field="!!drawingList.length"
+                 @tag-change="tagChange" @fetch-data="fetchData"
     />
 
-    <form-drawer
-      :visible.sync="drawerVisible"
-      :form-data="formData"
-      size="100%"
-      :generate-conf="generateConf"
+    <form-drawer :visible.sync="drawerVisible" :form-data="formData" size="100%" :generate-conf="generateConf" />
+    <json-drawer size="60%" :visible.sync="jsonDrawerVisible" :json-str="JSON.stringify(formData)"
+                 @refresh="refreshJson"
     />
-    <json-drawer
-      size="60%"
-      :visible.sync="jsonDrawerVisible"
-      :json-str="JSON.stringify(formData)"
-      @refresh="refreshJson"
-    />
-    <code-type-dialog
-      :visible.sync="dialogVisible"
-      title="选择生成类型"
-      :show-file-name="showFileName"
-      @confirm="generate"
-    />
+    <code-type-dialog :visible.sync="dialogVisible" title="选择生成类型" :show-file-name="showFileName" @confirm="generate" />
     <input id="copyNode" type="hidden">
   </div>
 </template>
@@ -130,6 +104,7 @@ import FormDrawer from './FormDrawer'
 import JsonDrawer from './JsonDrawer'
 import RightPanel from './RightPanel'
 import {
+  EChartsComponents,
   inputComponents, selectComponents, layoutComponents, formConf
 } from '@/components/generator/config'
 import {
@@ -148,6 +123,7 @@ import {
   getDrawingList, saveDrawingList, getIdGlobal, saveIdGlobal, getFormConf
 } from '@/utils/db'
 import loadBeautifier from '@/utils/loadBeautifier'
+import { EventBus } from '@/utils/event-bus'
 
 let beautifier
 const emptyActiveData = { style: {}, autosize: {} }
@@ -172,6 +148,7 @@ export default {
       logo,
       idGlobal,
       formConf,
+      EChartsComponents,
       inputComponents,
       selectComponents,
       layoutComponents,
@@ -200,8 +177,14 @@ export default {
         {
           title: '布局型组件',
           list: layoutComponents
+        },
+        {
+          title: 'ECharts组件',
+          list: EChartsComponents
         }
-      ]
+      ],
+      isRevoke: false,
+      isRedo: false
     }
   },
   computed: {
@@ -225,8 +208,11 @@ export default {
       immediate: true
     },
     drawingList: {
-      handler(val) {
+      handler(val, olVal) {
         this.saveDrawingListDebounce(val)
+        if (val.length === olVal.length && JSON.stringify(val).length === JSON.stringify(olVal).length) {
+          EventBus.$emit('on-history-add')
+        }
         if (val.length === 0) this.idGlobal = 100
       },
       deep: true
@@ -238,11 +224,58 @@ export default {
       immediate: true
     }
   },
+  created() {
+    const self = this
+    // eslint-disable-next-line func-names
+    document.onkeydown = function (e) {
+      if (e.key === 'Control') {
+        self.ts_key_code_one = 'Control'
+      }
+      if (e.key === 'z') {
+        self.ts_key_code_two = 'z'
+      }
+      if (e.key === 'y') {
+        self.ts_key_code_two = 'y'
+      }
+      if (self.ts_key_code_one === 'Control' && self.ts_key_code_two === 'z' && self.isRevoke) {
+        self.revoke()
+      }
+      if (self.ts_key_code_one === 'Control' && self.ts_key_code_two === 'y' && self.isRedo) {
+        self.redo()
+      }
+    }
+    // eslint-disable-next-line func-names
+    document.onkeyup = function (e) {
+      if (e.key === 'Control') {
+        self.ts_key_code_one = ''
+      }
+      if (e.key === 'z' || e.key === 'y') {
+        self.ts_key_code_two = ''
+      }
+    }
+  },
   mounted() {
+    const _this = this
+    this.$store.dispatch('history/clear').then(() => {
+      EventBus.$on('on-history-add', () => {
+        _this.$store.dispatch('history/add', { data: this.drawingList }).then(() => {
+          _this.isRevoke = true
+          _this.isRedo = false
+        })
+      })
+    })
     if (Array.isArray(drawingListInDB) && drawingListInDB.length > 0) {
       this.drawingList = drawingListInDB
+      _this.$store.dispatch('history/add', { data: this.drawingList }).then(() => {
+        _this.isRevoke = true
+        _this.isRedo = false
+      })
     } else {
       this.drawingList = drawingDefalut
+      _this.$store.dispatch('history/add', { data: this.drawingList }).then(() => {
+        _this.isRevoke = true
+        _this.isRedo = false
+      })
     }
     this.activeFormItem(this.drawingList[0])
     if (formConfInDB) {
@@ -337,13 +370,14 @@ export default {
       tempActiveData = clone
       return tempActiveData
     },
+
     createIdAndKey(item) {
       const config = item.__config__
       config.formId = ++this.idGlobal
       config.renderKey = `${config.formId}${+new Date()}` // 改变renderKey后可以实现强制更新组件
       if (config.layout === 'colFormItem') {
         item.__vModel__ = `field${this.idGlobal}`
-      } else if (config.layout === 'rowFormItem') {
+      } else if (config.layout === 'rowFormItem' || config.layout === 'tsElTabs') {
         config.componentName = `row${this.idGlobal}`
         !Array.isArray(config.children) && (config.children = [])
         delete config.label // rowFormItem无需配置label属性
@@ -460,6 +494,20 @@ export default {
       this.drawingList = deepClone(data.fields)
       delete data.fields
       this.formConf = data
+    },
+    revoke() {
+      this.$store.dispatch('history/revoke').then(ts => {
+        this.drawingList = ts.data
+        this.isRevoke = ts.undo
+        this.isRedo = ts.redo
+      })
+    },
+    redo() {
+      this.$store.dispatch('history/redo').then(ts => {
+        this.drawingList = ts.data
+        this.isRevoke = ts.undo
+        this.isRedo = ts.redo
+      })
     }
   }
 }

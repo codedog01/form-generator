@@ -1,16 +1,14 @@
+<!--
+ * @Author: lengao 841423154@qq.com
+ * @Date: 2021-05-30 08:58:16
+ * @LastEditors: lengao 841423154@qq.com
+ * @LastEditTime: 2023-11-09 10:11:03
+ * @FilePath: \form-generator-dev\src\components\SvgIcon\index.vue
+ * @Description:
+-->
 <template>
-  <div
-    v-if="isExternal"
-    :style="styleExternalIcon"
-    class="svg-external-icon svg-icon"
-    v-on="$listeners"
-  />
-  <svg
-    v-else
-    :class="svgClass"
-    aria-hidden="true"
-    v-on="$listeners"
-  >
+  <div v-if="isExternal" :style="styleExternalIcon" class="svg-external-icon svg-icon" v-on="$listeners" />
+  <svg v-else :class="svgClass" aria-hidden="true" v-on="$listeners">
     <use :xlink:href="iconName" />
   </svg>
 </template>
@@ -67,7 +65,7 @@ export default {
 
 .svg-external-icon {
   background-color: currentColor;
-  mask-size: cover!important;
+  mask-size: cover !important;
   display: inline-block;
 }
 </style>

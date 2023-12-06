@@ -1,7 +1,25 @@
+/*
+ * @Author: lengao 841423154@qq.com
+ * @Date: 2021-05-30 08:58:16
+ * @LastEditors: lengao 841423154@qq.com
+ * @LastEditTime: 2023-12-06 11:14:58
+ * @FilePath: \form-generator-dev\src\views\preview\main.js
+ * @Description:
+ */
 import Vue from 'vue'
 import { loadScriptQueue } from '@/utils/loadScript'
 import axios from 'axios'
 import Tinymce from '@/components/tinymce/index.vue'
+import TsSubform from '@/components/ts-sub-form/index.vue'
+import store from '@/store'
+
+import tsText from '@/components/ts-text/index'
+import tsLineChart from '@/components/ts-charts/ts-line-chart/index'
+
+Vue.component('tsLineChart', tsLineChart)
+Vue.component('tsText', tsText)
+
+Vue.component('ts-sub-form', TsSubform)
 
 Vue.component('tinymce', Tinymce)
 Vue.prototype.$axios = axios
@@ -48,6 +66,7 @@ function newVue(attrs, main, html) {
   main = eval(`(${main})`)
   main.template = `<div>${html}</div>`
   new Vue({
+    store,
     components: {
       child: main
     },

@@ -9,11 +9,50 @@ export const formConf = {
   gutter: 15,
   disabled: false,
   span: 24,
-  formBtns: true
+  formBtns: true,
+  other: 'other'
 }
 
 // 输入型组件 【左面板】
 export const inputComponents = [
+
+  {
+    __config__: {
+      label: '文本',
+      width: '200px',
+      prop: '',
+      align: '',
+      labelWidth: null,
+      labelHeight: null,
+      showLabel: false,
+      changeTag: true,
+      tag: 'ts-text',
+      tagIcon: 'text',
+      defaultValue: undefined,
+      style: {
+        fonWeight: 'bold'
+      },
+      required: false,
+      layout: 'colFormItem',
+      span: 24,
+      document: 'https://element.eleme.cn/#/zh-CN/component/input',
+      // 正则校验规则
+      regList: []
+    },
+    // 组件的插槽属性
+    __slot__: {
+      span: '文本'
+    },
+    // 其余的为可直接写在组件标签上的属性
+    style: { width: '100%' },
+    clearable: true,
+    'prefix-icon': '',
+    'suffix-icon': '',
+    maxlength: null,
+    'show-word-limit': false,
+    readonly: false,
+    disabled: false
+  },
   {
     // 组件的自定义配置
     __config__: {
@@ -153,6 +192,46 @@ export const inputComponents = [
 export const selectComponents = [
   {
     __config__: {
+      label: '远程搜索',
+      showLabel: true,
+      labelWidth: null,
+      tag: 'ts-universal-select',
+      tagIcon: 'select',
+      layout: 'colFormItem',
+      span: 24,
+      required: true,
+      regList: [],
+      changeTag: true,
+      document: 'https://element.eleme.cn/#/zh-CN/component/select'
+    },
+    placeholder: '请选择',
+    style: { width: '100%' },
+    requestApi: 'search/FoodHeat',
+    requestKey: 'keyword',
+    label: 'name',
+    field: 'desc',
+    requestType: 'get'
+  },
+  {
+    __config__: {
+      label: '字典选择',
+      showLabel: true,
+      labelWidth: null,
+      tag: 'ts-select-data-dictionary',
+      tagIcon: 'select',
+      layout: 'colFormItem',
+      span: 24,
+      required: true,
+      regList: [],
+      changeTag: true,
+      document: 'https://element.eleme.cn/#/zh-CN/component/select'
+    },
+    placeholder: '请选择',
+    style: { width: '100%' },
+    code: '水果'
+  },
+  {
+    __config__: {
       label: '下拉选择',
       showLabel: true,
       labelWidth: null,
@@ -174,6 +253,7 @@ export const selectComponents = [
         value: 2
       }]
     },
+    on: { change(value) { console.log(value) } },
     placeholder: '请选择',
     style: { width: '100%' },
     clearable: true,
@@ -513,6 +593,170 @@ export const selectComponents = [
 export const layoutComponents = [
   {
     __config__: {
+      formId: 102,
+      label: '标签页', // 在home.vue页面左侧呈现的组件名称
+      tagIcon: 'table', // 在home.vue页面左侧呈现的组件图标
+      showLabel: false, // 是否在中间可视化区域默认显示label
+      changeTag: false, // 是否在右侧操作面板可进行组件类型切换
+      labelWidth: null, // 组件默认宽度
+      defaultValue: 'first',
+      componentName: 'row89757',
+      tag: 'el-tabs', // 组件的名称
+      span: 24, // 默认栅格布局数值
+      layout: 'tsElTabs' // 在DraggableItem.vue中默认处理的方法
+    },
+    children: [
+      {
+        label: '用户管理',
+        children: [], // 主要用于存储拖拽进来的子组件
+        name: 'first'
+      },
+      {
+        children: [],
+        label: '配置管理',
+        name: 'second'
+      }
+    ],
+    // 从这里开始就是el-tabs标签的属性 主要是在home.vue页面的右侧操作面板进行操作更改
+    type: 'card', // 风格类型
+    closable: false, // 标签是否可关闭
+    addable: false, // 标签是否可增加
+    editable: false, // 标签是否同时可增加和关闭
+    'tab-position': 'top', // 选项卡所在位置
+    stretch: false // 标签的宽度是否自撑开
+  },
+  {
+    __config__: {
+      layout: 'tsSteps',
+      tagIcon: 'table',
+      tag: 'el-steps',
+      document: 'https://element.eleme.cn/#/zh-CN/component/steps',
+      span: 24,
+      formId: 101,
+      renderKey: 1595761764204,
+      componentName: 'row102',
+      showLabel: false,
+      changeTag: true,
+      labelWidth: null,
+      dataType: 'dynamic',
+      label: '步骤条'
+    },
+    children: [{
+      children: [],
+      description: '',
+      title: '步骤 2' // 标题
+    },
+    {
+      children: [],
+      description: '',
+      title: '步骤 2' // 标题
+    }],
+    'finish-status': 'success',
+    active: 0,
+    'align-center': false,
+    'finish-text': '完成步骤！'
+  },
+
+  {
+    __config__: {
+      layout: 'colFormItem',
+      tagIcon: 'table',
+      tag: 'el-collapse',
+      document: 'https://element.eleme.cn/#/zh-CN/component/collapse',
+      span: 24,
+      formId: 101,
+      renderKey: 1595761764204,
+      componentName: 'row102',
+      showLabel: false,
+      changeTag: true,
+      labelWidth: null,
+      label: '折叠面板',
+      dataType: 'dynamic',
+      method: 'get',
+      children: [{
+        __config__: {
+          layout: 'raw',
+          tag: 'el-collapse-item',
+          renderKey: 15957617660111,
+          children: [{
+            __config__: {
+              layout: 'rowFormItem',
+              children: []
+            }
+          }]
+        },
+        title: '折叠面板1', // 面板标题
+        name: 1, // 唯一标志符
+        disabled: false // 是否禁用
+      },
+      {
+        __config__: {
+          layout: 'raw',
+          tag: 'el-collapse-item',
+          renderKey: 15957617660112,
+          children: [{
+            __config__: {
+              layout: 'rowFormItem',
+              children: []
+            }
+          }]
+        },
+        title: '折叠面板2',
+        name: 2,
+        disabled: false
+      }]
+    },
+    accordion: false // 是否手风琴模式
+  },
+  {
+    // 组件的自定义配置
+    __config__: {
+      formId: 105,
+      componentName: 'row105',
+      label: '卡片名称',
+      layout: 'tsCard',
+      labelWidth: '120px',
+      showLabel: false,
+      changeTag: false,
+      tag: 'el-card',
+      tagIcon: 'input',
+      defaultValue: undefined,
+      required: false,
+      span: 24,
+      document: 'https://element.eleme.cn/#/zh-CN/component/card',
+      children: {
+        cardHeader: [],
+        cardBody: []
+      }
+    },
+    // 其余的为可直接写在组件标签上的属性
+    shadow: 'always' // 设置阴影显示时机
+  },
+  {
+    __config__: {
+      label: '图片',
+      labelWidth: null,
+      labelHeight: null,
+      showLabel: false,
+      changeTag: true,
+      tag: 'el-image',
+      tagIcon: 'image',
+      required: false,
+      span: 24,
+      layout: 'colFormItem'
+    },
+    style: { width: '100px', height: '100px' },
+    'preview-src-list': ['https://images.pexels.com/photos/7615255/pexels-photo-7615255.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      'https://images.pexels.com/photos/12294406/pexels-photo-12294406.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+      'https://images.pexels.com/photos/14540599/pexels-photo-14540599.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'
+    ], // 开启图片预览功能
+    src: 'https://images.pexels1111.com/photos/7615255/pexels-photo-7615255.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1', // 图片源，同原生
+    fit: 'fill', // 确定图片如何适应容器框，同原生 object-fit
+    placeholder: '图片加载中……', // 图片未加载的占位内容
+    error: '图片记载失败' // 加载失败的内容
+  },
+  {
+    __config__: {
       layout: 'rowFormItem',
       tagIcon: 'row',
       label: '行容器',
@@ -559,12 +803,12 @@ export const layoutComponents = [
       showLabel: true,
       changeTag: true,
       labelWidth: null,
-      label: '表格[开发中]',
+      label: '表格',
       dataType: 'dynamic',
       method: 'get',
       dataPath: 'list',
       dataConsumer: 'data',
-      url: 'https://www.fastmock.site/mock/f8d7a54fb1e60561e2f720d5a810009d/fg/tableData',
+      url: 'https://www.fastmock.site/mock/f8d7a54fb1e60561e2f720d5a810009d/fg/tableData', // 请求数据的地址
       children: [{
         __config__: {
           layout: 'raw',
@@ -616,14 +860,92 @@ export const layoutComponents = [
         label: '操作'
       }]
     },
-    data: [],
+    data: [], // 数据
     directives: [{
       name: 'loading',
       value: true
     }],
-    border: true,
+    border: true, // 是否带有纵向边框
+    stripe: true, // 是否为斑马纹 table
+    'show-header': true, // 是否显示表头
+    size: 'medium', // Table 的尺寸
     type: 'default',
     justify: 'start',
     align: 'top'
+  },
+  {
+    __config__: {
+      layout: 'tsSubform', // 拖拽处理方法
+      tagIcon: 'row',
+      tag: 'ts-sub-form', // 组件名称
+      label: '子表单',
+      showLabel: false,
+      defaultValue: [], // v-model
+      children: [] // 子节点
+    },
+    addButton: true, // 默认可添加
+    deleteButton: true, // 默认可删除
+    displayShow: 'transverse',
+    canEdit: true // 默认可编辑，为false时添加和删除都不可用，并且表单为disabled状态
+  },
+  {
+    __config__: {
+      layout: 'colFormItem',
+      tagIcon: 'table',
+      tag: 'ts-iframe',
+      span: 24,
+      formId: 222,
+      componentName: 'row222',
+      showLabel: false,
+      changeTag: true,
+      labelWidth: null,
+      label: 'iframe'
+    },
+    src: 'https://www.w3school.com.cn/tags/tag_iframe.asp',
+    width: '100%',
+    height: 200
+  }
+]
+
+// ECharts组件 【做面板】
+export const EChartsComponents = [
+  {
+    __config__: {
+      label: '折线图',
+      showLabel: false,
+      changeTag: true,
+      tag: 'ts-line-chart',
+      tagIcon: 'input',
+      defaultValue: undefined,
+      layout: 'colFormItem',
+      span: 24
+    },
+    name: '*****占比',
+    seriesData: [
+      {
+        name: 'java',
+        value: 30
+      },
+      {
+        name: 'JavaScript',
+        value: 50
+      },
+      {
+        name: 'php',
+        value: 20
+      }
+    ],
+    title: {
+      text: '啦啦啦啦',
+      subtext: 'ts-designer公司',
+      left: 'center'
+    },
+    extraOption: {
+      color: ['#fe883a', '#2d90d1', '#f75981', '#90e2a9']
+    },
+    style: {
+      width: '90vh',
+      height: '90vh'
+    }
   }
 ]

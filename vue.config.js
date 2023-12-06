@@ -1,3 +1,11 @@
+/*
+ * @Author: lengao 841423154@qq.com
+ * @Date: 2021-05-30 08:58:16
+ * @LastEditors: lengao 841423154@qq.com
+ * @LastEditTime: 2023-12-06 17:21:40
+ * @FilePath: \form-generator-dev\vue.config.js
+ * @Description:
+ */
 const path = require('path')
 
 const minify = process.env.NODE_ENV === 'development' ? false : {
@@ -14,6 +22,7 @@ const minify = process.env.NODE_ENV === 'development' ? false : {
 function resolve(dir) {
   return path.join(__dirname, dir)
 }
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin')
 
 module.exports = {
   publicPath: process.env.NODE_ENV === 'production'
@@ -36,7 +45,8 @@ module.exports = {
     }
   },
   devServer: {
-    overlay: false
+    overlay: false,
+    proxy: 'https://api.oioweb.cn/api/'
   },
   productionSourceMap: false,
   configureWebpack: {
@@ -44,7 +54,10 @@ module.exports = {
       vue: 'Vue',
       'vue-router': 'VueRouter',
       'element-ui': 'ELEMENT'
-    }
+    },
+    plugins: [
+      new MonacoWebpackPlugin({ languages: ['javascript', 'typescript', 'html', 'css', 'json'] })
+    ]
   },
   chainWebpack(config) {
     // set svg-sprite-loader
